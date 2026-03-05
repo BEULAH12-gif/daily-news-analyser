@@ -2,8 +2,8 @@ name: Daily News Report
 
 on:
   schedule:
-    - cron: '0 7 * * *'  # Every day at 7am UTC
-  workflow_dispatch:      # Allows manual trigger too
+    - cron: '0 7 * * *'
+  workflow_dispatch:
 
 jobs:
   send_report:
@@ -18,12 +18,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install feedparser pandas textblob newspaper3k
-
-      - name: Convert notebook to script
-        run: |
-          pip install nbconvert
-          jupyter nbconvert --to script news_analyser.ipynb
+          pip install feedparser pandas textblob
 
       - name: Run news analyser
         env:
