@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install requests pandas textblob deep-translator
+          python -m pip install requests pandas textblob
 
       - name: Download TextBlob corpora
         run: |
