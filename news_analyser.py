@@ -1,3 +1,4 @@
+from deep_translator import GoogleTranslator
 import requests
 import pandas as pd
 from textblob import TextBlob
