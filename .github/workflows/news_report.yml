@@ -18,11 +18,17 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install feedparser pandas textblob
+          python -m pip install --upgrade pip
+          python -m pip install requests pandas textblob
+
+      - name: Download TextBlob corpora
+        run: |
+          python -m textblob.download_corpora
 
       - name: Run news analyser
         env:
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
         run: python news_analyser.py
