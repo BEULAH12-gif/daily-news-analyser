@@ -1,4 +1,3 @@
-from deep_translator import GoogleTranslator
 import requests
 import pandas as pd
 from textblob import TextBlob
@@ -58,11 +57,6 @@ def categorize_topic(text):
         return "General"
 
 df["sentiment"] = df["title"].apply(get_sentiment)
-# Translate to Swahili
-print("Translating to Swahili...")
-df["title"] = df["title"].apply(lambda x: GoogleTranslator(source='auto', target='sw').translate(str(x)))
-df["summary"] = df["summary"].apply(lambda x: GoogleTranslator(source='auto', target='sw').translate(str(x)) if str(x) != "nan" else "")
-print("Translation done!")
 df["topic"] = df["title"].apply(categorize_topic)
 
 # Build email
@@ -77,7 +71,7 @@ for _, row in df.iterrows():
     image_html = ""
     if row["image"] and str(row["image"]) != "nan":
         image_html = f'<img src="{row["image"]}" width="400" style="border-radius:8px; margin-bottom:8px;"/><br/>'
-    
+
     if row["sentiment"] == "Positive":
         sentiment_color = "green"
     elif row["sentiment"] == "Negative":
