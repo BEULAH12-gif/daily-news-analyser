@@ -1,0 +1,33 @@
+name: Daily News Report
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # Every day at 7am UTC
+  workflow_dispatch:      # Allows manual trigger too
+
+jobs:
+  send_report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install feedparser pandas textblob newspaper3k
+
+      - name: Convert notebook to script
+        run: |
+          pip install nbconvert
+          jupyter nbconvert --to script news_analyser.ipynb
+
+      - name: Run news analyser
+        env:
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+        run: python news_analyser.py
