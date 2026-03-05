@@ -1,4 +1,4 @@
-import feedparser
+import requests
 import pandas as pd
 from textblob import TextBlob
 import smtplib
@@ -6,23 +6,25 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import os
 
-rss_feeds = {
-    "BBC": "http://feeds.bbci.co.uk/news/rss.xml",
-    "Reuters": "https://feeds.reuters.com/reuters/topNews",
-    "AP News": "https://feeds.apnews.com/rss/apf-topnews",
-    "Google News": "https://news.google.com/rss"
-}
+NEWS_API_KEY = os.environ["NEWS_API_KEY"]
+SENDER_EMAIL = os.environ["SENDER_EMAIL"]
+RECEIVER_EMAIL = os.environ["RECEIVER_EMAIL"]
+APP_PASSWORD = os.environ["APP_PASSWORD"]
+
+# Fetch news with images from NewsAPI
+url = f"https://newsapi.org/v2/top-headlines?language=en&pageSize=30&apiKey={NEWS_API_KEY}"
+response = requests.get(url)
+data = response.json()
 
 articles = []
-for source, url in rss_feeds.items():
-    feed = feedparser.parse(url)
-    for entry in feed.entries[:10]:
-        articles.append({
-            "source": source,
-            "title": entry.get("title", ""),
-            "summary": entry.get("summary", ""),
-            "link": entry.get("link", "")
-        })
+for article in data.get("articles", []):
+    articles.append({
+        "source": article["source"]["name"],
+        "title": article.get("title", ""),
+        "summary": article.get("description", ""),
+        "link": article.get("url", ""),
+        "image": article.get("urlToImage", "")
+    })
 
 df = pd.DataFrame(articles)
 
@@ -57,30 +59,46 @@ def categorize_topic(text):
 df["sentiment"] = df["title"].apply(get_sentiment)
 df["topic"] = df["title"].apply(categorize_topic)
 
-SENDER_EMAIL = os.environ["SENDER_EMAIL"]
-RECEIVER_EMAIL = os.environ["RECEIVER_EMAIL"]
-APP_PASSWORD = os.environ["APP_PASSWORD"]
-
+# Build email
 msg = MIMEMultipart("alternative")
 msg["Subject"] = "Your Daily News Report " + pd.Timestamp.now().strftime("%B %d, %Y")
 msg["From"] = SENDER_EMAIL
 msg["To"] = RECEIVER_EMAIL
 
-rows = ""
+# Build news cards with images
+cards = ""
 for _, row in df.iterrows():
-    rows += "<tr><td>" + row["source"] + "</td><td>" + row["title"] + "</td><td>" + row["topic"] + "</td><td>" + row["sentiment"] + "</td><td><a href='" + row["link"] + "'>Read More</a></td></tr>"
+    image_html = ""
+    if row["image"] and str(row["image"]) != "nan":
+        image_html = f'<img src="{row["image"]}" width="400" style="border-radius:8px; margin-bottom:8px;"/><br/>'
+    
+    if row["sentiment"] == "Positive":
+        sentiment_color = "green"
+    elif row["sentiment"] == "Negative":
+        sentiment_color = "red"
+    else:
+        sentiment_color = "gray"
 
-html = """
-<h2>Today's News Analysis</h2>
-<p>Total articles: """ + str(len(df)) + """</p>
-<h3>Top Headlines</h3>
-<table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse; width:100%;">
-<tr style="background-color:#f2f2f2;">
-<th>Source</th><th>Headline</th><th>Topic</th><th>Sentiment</th><th>Link</th>
-</tr>
-""" + rows + """
-</table>
-<p>Generated automatically by your News Analyser</p>
+    cards += f"""
+    <div style="border:1px solid #ddd; border-radius:10px; padding:15px; margin-bottom:20px; font-family:Arial;">
+        {image_html}
+        <small style="color:#888;">{row['source']} &nbsp;|&nbsp; {row['topic']}</small><br/>
+        <b style="font-size:16px;">{row['title']}</b><br/><br/>
+        <p style="color:#555;">{row['summary']}</p>
+        <span style="color:{sentiment_color}; font-weight:bold;">● {row['sentiment']}</span>
+        &nbsp;&nbsp;
+        <a href="{row['link']}" style="background:#1a73e8; color:white; padding:6px 12px; border-radius:5px; text-decoration:none;">Read More</a>
+    </div>
+    """
+
+html = f"""
+<div style="max-width:650px; margin:auto; font-family:Arial;">
+    <h1 style="color:#1a73e8;">📰 Daily News Report</h1>
+    <p>{pd.Timestamp.now().strftime("%B %d, %Y")} &nbsp;|&nbsp; {len(df)} articles analysed</p>
+    <hr/>
+    {cards}
+    <p style="color:#aaa; font-size:12px;">Generated automatically by your News Analyser 🤖</p>
+</div>
 """
 
 msg.attach(MIMEText(html, "html"))
