@@ -58,6 +58,11 @@ def categorize_topic(text):
         return "General"
 
 df["sentiment"] = df["title"].apply(get_sentiment)
+# Translate to Swahili
+print("Translating to Swahili...")
+df["title"] = df["title"].apply(lambda x: GoogleTranslator(source='auto', target='sw').translate(str(x)))
+df["summary"] = df["summary"].apply(lambda x: GoogleTranslator(source='auto', target='sw').translate(str(x)) if str(x) != "nan" else "")
+print("Translation done!")
 df["topic"] = df["title"].apply(categorize_topic)
 
 # Build email
